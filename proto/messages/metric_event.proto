@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+enum MetricType {
+  GAUGE = 0;   
+  COUNTER = 1; 
+  HISTOGRAM = 2;
+}
+
+message MetricEvent {
+  string tenant_id = 1;
+  string client_id = 2;
+
+  // Timestamp of the event in Unix format (milliseconds)
+  int64 event_timestamp = 3;
+
+  // The name of the metric being reported
+  string metric_name = 4;
+
+  // The value of the metric
+  double metric_value = 5;
+
+  // The type of the metric
+  MetricType metric_type = 6;
+}
