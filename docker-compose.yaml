@@ -39,13 +39,41 @@ services:
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
     environment:
+      - SCHEMA_REGISTRY_HOST_NAME=schema-registry
       - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_LISTENER=http://0.0.0.0:8081
     ports:
       - "8081:8081"
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
+      interval: 3s
+      retries: 10
+      timeout: 10s
   
+  # Initialize registry
+  init-schema-registry:
+    build:
+      context: docker/alpine-curl-jq
+    command: /kafka/init-scripts/init-schema-registry-proto.sh
+    volumes:
+      - ./proto:/proto
+      - ./kafka/init-scripts:/kafka/init-scripts
+    depends_on:
+      schema-registry:
+        condition: service_healthy
+  
+  # Compile protobuf defs
+  compile-proto:
+    build:
+      context: docker/protoc-gen-go
+    command: bash /proto/scripts/compile-proto-go.sh
+    volumes:
+      - ./proto:/proto
+    restart: no
+
   # Kafka connect JDBC connector
   kafka-connect:
     image: confluentinc/cp-kafka-connect:latest
@@ -75,8 +103,10 @@ services:
         confluent-hub install --no-prompt confluentinc/kafka-connect-protobuf-converter:latest
         /etc/confluent/docker/run
     depends_on:
-      - kafka
-      - schema-registry
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
 
   # TimescaleDB (PostgreSQL)
   timescale-db:

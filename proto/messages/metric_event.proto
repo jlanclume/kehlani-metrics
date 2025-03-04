@@ -1,5 +1,9 @@
 syntax = "proto3";
 
+package metrics;
+
+option go_package = "github.com/jlanclume/kehlani-metrics/proto";
+
 enum MetricType {
   GAUGE = 0;   
   COUNTER = 1; 
@@ -21,4 +25,16 @@ message MetricEvent {
 
   // The type of the metric
   MetricType metric_type = 6;
+}
+
+message MetricEventRequest {
+  MetricEvent event = 1;
+}
+
+message MetricEventResponse {
+  string status = 1;
+}
+
+service MetricEventService {
+  rpc SaveMetricEvent(MetricEventRequest) returns (MetricEventResponse);
 }
