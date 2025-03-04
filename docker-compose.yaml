@@ -72,6 +72,7 @@ services:
     command: bash /proto/scripts/compile-proto-go.sh
     volumes:
       - ./proto:/proto
+      - ./go/proto:/target
     restart: no
 
   # Kafka connect JDBC connector
@@ -94,7 +95,8 @@ services:
       CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
       CONNECT_REST_PORT: "8083"
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
-      CONNECT_SCHEMA_REGISTRY_URL: http://schema-registry:8081 
+      CONNECT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_VALUE_CONVERTER_PROTOBUF_SCHEMA: "proto.MetricEvent"
     command: 
       - bash 
       - -c 
@@ -130,9 +132,8 @@ services:
       timescale-db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgres://kehlani-user:kehlani-pwd@timescale-db:5432/events-db?sslmode=disable
     command: -path /migrations -database $DATABASE_URL up
     volumes:
       - ./timescaledb/migrations:/migrations
-      - ./.env:/app/.env 
     restart: "no"

@@ -1,13 +1,16 @@
 #!/bin/bash
 
-mkdir -p /proto/generated/
-rm -r /proto/generated/*
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+TARGET_DIR="/target"
 
-find /proto/messages -name "*.proto" | while read file; do
+rm -rf "$TARGET_DIR/*"
+ 
+# Find all .proto files and compile them
+find "$SCRIPT_DIR/../messages" -name "*.proto" | while read file; do
   echo "Compiling $file..."
-  protoc --proto_path /proto/messages \
-         --go_out=/proto/generated --go_opt=paths=source_relative \
-         --go-grpc_out=/proto/generated --go-grpc_opt=paths=source_relative \
+  protoc --proto_path="$SCRIPT_DIR/../messages" \
+         --go_out="$TARGET_DIR" --go_opt=paths=source_relative \
+         --go-grpc_out="$TARGET_DIR" --go-grpc_opt=paths=source_relative \
          "$file"
 done
 

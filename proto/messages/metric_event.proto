@@ -1,8 +1,9 @@
 syntax = "proto3";
 
-package metrics;
+package proto;
 
-option go_package = "github.com/jlanclume/kehlani-metrics/proto";
+option go_package = "proto/";
+option java_package = "com.lanclume.kehlani.proto";
 
 enum MetricType {
   GAUGE = 0;   
