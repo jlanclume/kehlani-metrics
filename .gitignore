@@ -1,1 +1,4 @@
 .env
+go/bin
+go/build
+.DS_Store

@@ -1,0 +1,12 @@
+# Exclude docker files
+docker-compose.yml
+Dockerfile*
+
+Makefile
+
+./bin
+
+.DS_Store
+
+.gitignore
+

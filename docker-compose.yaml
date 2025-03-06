@@ -4,6 +4,8 @@ services:
     image: bitnami/kafka:latest
     hostname: kafka
     container_name: kafka
+    networks:
+      - kelhani-network
     ports:
       - "9092:9092"
     environment:
@@ -19,7 +21,8 @@ services:
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_KRAFT_CLUSTER_ID=1
     healthcheck:
-      test: [ "CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9092 --list" ]
+      test:
+        ["CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9092 --list"]
       interval: 5s
       timeout: 10s
       retries: 5
@@ -27,6 +30,9 @@ services:
   # Scripts to initialize Kafka
   init-kafka:
     image: bitnami/kafka:latest
+    container_name: init-kafka
+    networks:
+      - kelhani-network
     depends_on:
       kafka:
         condition: service_healthy
@@ -34,10 +40,13 @@ services:
     command: init-kafka-topics.sh
     volumes:
       - ./kafka/init-scripts:/usr/local/bin
-  
+
   # Setup proto registry
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    networks:
+      - kelhani-network
     environment:
       - SCHEMA_REGISTRY_HOST_NAME=schema-registry
       - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka:9092
@@ -52,11 +61,14 @@ services:
       interval: 3s
       retries: 10
       timeout: 10s
-  
+
   # Initialize registry
   init-schema-registry:
+    container_name: init-schema-registry
     build:
       context: docker/alpine-curl-jq
+    networks:
+      - kelhani-network
     command: /kafka/init-scripts/init-schema-registry-proto.sh
     volumes:
       - ./proto:/proto
@@ -64,11 +76,14 @@ services:
     depends_on:
       schema-registry:
         condition: service_healthy
-  
+
   # Compile protobuf defs
   compile-proto:
+    container_name: compile-proto
     build:
       context: docker/protoc-gen-go
+    networks:
+      - kelhani-network
     command: bash /proto/scripts/compile-proto-go.sh
     volumes:
       - ./proto:/proto
@@ -77,7 +92,10 @@ services:
 
   # Kafka connect JDBC connector
   kafka-connect:
+    container_name: kafka-connect
     image: confluentinc/cp-kafka-connect:latest
+    networks:
+      - kelhani-network
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka:9092
       CONNECT_GROUP_ID: "kafka-connect-group"
@@ -88,7 +106,7 @@ services:
       CONNECT_OFFSET_STORAGE_TOPIC: "kafka-connect-offsets"
       CONNECT_STATUS_STORAGE_TOPIC: "kafka-connect-status"
       CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
-      CONNECT_VALUE_CONVERTER: "io.confluent.connect.protobuf.ProtobufConverter" 
+      CONNECT_VALUE_CONVERTER: "io.confluent.connect.protobuf.ProtobufConverter"
       CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
       CONNECT_REST_ADVERTISED_LISTENER: http
@@ -97,9 +115,9 @@ services:
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
       CONNECT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONNECT_VALUE_CONVERTER_PROTOBUF_SCHEMA: "proto.MetricEvent"
-    command: 
-      - bash 
-      - -c 
+    command:
+      - bash
+      - -c
       - |
         echo "Installing connector plugins"
         confluent-hub install --no-prompt confluentinc/kafka-connect-protobuf-converter:latest
@@ -113,21 +131,39 @@ services:
   # TimescaleDB (PostgreSQL)
   timescale-db:
     image: timescale/timescaledb:2.18.1-pg17
+    container_name: timescale-db
+    networks:
+      - kelhani-network
     environment:
       POSTGRES_USER: kehlani-user
       POSTGRES_PASSWORD: kehlani-pwd
       POSTGRES_DB: events-db
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "kehlani-user", "-d", "events-db", "-h", "localhost", "-p", "5432"]
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "kehlani-user",
+          "-d",
+          "events-db",
+          "-h",
+          "localhost",
+          "-p",
+          "5432",
+        ]
       interval: 10s
       retries: 5
       timeout: 5s
     ports:
       - "5432:5432"
-  
+
   # DB migration
   migrate:
+    container_name: migrate
     image: migrate/migrate
+    networks:
+      - kelhani-network
     depends_on:
       timescale-db:
         condition: service_healthy
@@ -137,3 +173,25 @@ services:
     volumes:
       - ./timescaledb/migrations:/migrations
     restart: "no"
+
+  # Go service
+  kelhani-go:
+    container_name: kelhani-go
+    networks:
+      - kelhani-network
+    build:
+      context: ./go
+      dockerfile: Dockerfile.dev
+      target: dev-runner
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./go:/opt/kelhani/api/src
+    depends_on:
+      - kafka
+      - schema-registry
+      - timescale-db
+
+networks:
+  kelhani-network:
+    driver: bridge
