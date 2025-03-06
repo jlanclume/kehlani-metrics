@@ -1,6 +1,6 @@
 BEGIN;
 
--- Create a single for all tenants
+-- Create a single table for all tenants
 CREATE TABLE metric_events (
     event_timestamp TIMESTAMPTZ NOT NULL,
     client_id TEXT NOT NULL,

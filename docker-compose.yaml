@@ -1,4 +1,4 @@
-services:
+le services:
   # Kafka (Kraft) Broker
   kafka:
     image: bitnami/kafka:latest
@@ -23,6 +23,16 @@ services:
       interval: 5s
       timeout: 10s
       retries: 5
+  
+  kafka-ui:
+    image: docker.redpanda.com/redpandadata/console:latest
+    ports:
+      - 8080:8080
+    environment:
+      - KAFKA_BROKERS=kafka:9092    
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   # Scripts to initialize Kafka
   init-kafka:
@@ -34,81 +44,17 @@ services:
     command: init-kafka-topics.sh
     volumes:
       - ./kafka/init-scripts:/usr/local/bin
-  
-  # Setup proto registry
-  schema-registry:
-    image: confluentinc/cp-schema-registry:latest
-    environment:
-      - SCHEMA_REGISTRY_HOST_NAME=schema-registry
-      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_LISTENER=http://0.0.0.0:8081
-    ports:
-      - "8081:8081"
-    depends_on:
-      kafka:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/subjects"]
-      interval: 3s
-      retries: 10
-      timeout: 10s
-  
-  # Initialize registry
-  init-schema-registry:
-    build:
-      context: docker/alpine-curl-jq
-    command: /kafka/init-scripts/init-schema-registry-proto.sh
-    volumes:
-      - ./proto:/proto
-      - ./kafka/init-scripts:/kafka/init-scripts
-    depends_on:
-      schema-registry:
-        condition: service_healthy
+    restart: no
   
   # Compile protobuf defs
   compile-proto:
     build:
       context: docker/protoc-gen-go
-    command: bash /proto/scripts/compile-proto-go.sh
+    command: bash /protobuf/scripts/compile-proto-go.sh
     volumes:
-      - ./proto:/proto
-      - ./go/proto:/target
+      - ./protobuf:/protobuf
+      - ./go/protobuf:/target
     restart: no
-
-  # Kafka connect JDBC connector
-  kafka-connect:
-    image: confluentinc/cp-kafka-connect:latest
-    environment:
-      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
-      CONNECT_GROUP_ID: "kafka-connect-group"
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_CONFIG_STORAGE_TOPIC: "kafka-connect-configs"
-      CONNECT_OFFSET_STORAGE_TOPIC: "kafka-connect-offsets"
-      CONNECT_STATUS_STORAGE_TOPIC: "kafka-connect-status"
-      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
-      CONNECT_VALUE_CONVERTER: "io.confluent.connect.protobuf.ProtobufConverter" 
-      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
-      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "true"
-      CONNECT_REST_ADVERTISED_LISTENER: http
-      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
-      CONNECT_REST_PORT: "8083"
-      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
-      CONNECT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      CONNECT_VALUE_CONVERTER_PROTOBUF_SCHEMA: "proto.MetricEvent"
-    command: 
-      - bash 
-      - -c 
-      - |
-        echo "Installing connector plugins"
-        confluent-hub install --no-prompt confluentinc/kafka-connect-protobuf-converter:latest
-        /etc/confluent/docker/run
-    depends_on:
-      kafka:
-        condition: service_healthy
-      schema-registry:
-        condition: service_healthy
 
   # TimescaleDB (PostgreSQL)
   timescale-db:
@@ -131,9 +77,7 @@ services:
     depends_on:
       timescale-db:
         condition: service_healthy
-    environment:
-      - DATABASE_URL=postgres://kehlani-user:kehlani-pwd@timescale-db:5432/events-db?sslmode=disable
-    command: -path /migrations -database $DATABASE_URL up
+    command: -path /migrations -database "postgres://kehlani-user:kehlani-pwd@timescale-db:5432/events-db?sslmode=disable" up
     volumes:
       - ./timescaledb/migrations:/migrations
     restart: "no"

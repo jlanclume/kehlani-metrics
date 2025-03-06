@@ -13,6 +13,15 @@ Features
 Getting Started
 ---------------
 
+1. Dependencies
+
+* sqlc
+```sh
+go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+```
+
+
+2. Run
 To start the components of this project, run the following command:
 ```sh
 docker compose up

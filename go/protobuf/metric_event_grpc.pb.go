@@ -4,7 +4,7 @@
 // - protoc             v4.24.4
 // source: metric_event.proto
 
-package proto
+package protobuf
 
 import (
 	context "context"
@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MetricEventService_SaveMetricEvent_FullMethodName = "/proto.MetricEventService/SaveMetricEvent"
+	MetricEventService_SaveMetricEvent_FullMethodName = "/protobuf.MetricEventService/SaveMetricEvent"
 )
 
 // MetricEventServiceClient is the client API for MetricEventService service.
@@ -108,7 +108,7 @@ func _MetricEventService_SaveMetricEvent_Handler(srv interface{}, ctx context.Co
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var MetricEventService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "proto.MetricEventService",
+	ServiceName: "protobuf.MetricEventService",
 	HandlerType: (*MetricEventServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

@@ -1,9 +1,8 @@
 syntax = "proto3";
 
-package proto;
+package protobuf;
 
-option go_package = "proto/";
-option java_package = "com.lanclume.kehlani.proto";
+option go_package = "protobuf/";
 
 enum MetricType {
   GAUGE = 0;   
