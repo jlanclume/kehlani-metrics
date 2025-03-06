@@ -33,6 +33,4 @@ RUN go build -o /opt/kelhani/api && \
 
 # Production Runner stage
 FROM builder AS runner
-ENV GIN_MODE=release
-ENV PORT=8000
 ENTRYPOINT ["/opt/kelhani/api"]
