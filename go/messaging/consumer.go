@@ -23,9 +23,10 @@ func (kc *KafkaConsumer) Stop() error {
 // NewKafkaConsumer creates a new Kafka consumer.
 func NewKafkaConsumer(broker string, groupID string, dbAdapter *database.DatabaseAdapter) *KafkaConsumer {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: []string{broker},
-		Topic:   "metric-event",
-		GroupID: groupID,
+		Brokers:        []string{broker},
+		Topic:          "metric-event",
+		GroupID:        groupID,
+		CommitInterval: 1,
 	})
 
 	return &KafkaConsumer{
@@ -62,6 +63,8 @@ func (kc *KafkaConsumer) ConsumeMessages(ctx context.Context) {
 			metricEvent.MetricType)
 
 		// Persist event
-		kc.dbAdapter.SaveMetricEvent(ctx, &metricEvent)
+		if err := kc.dbAdapter.SaveMetricEvent(ctx, &metricEvent); err != nil {
+			log.Printf("Failed to save metric event: %v", err)
+		}
 	}
 }

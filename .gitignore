@@ -1,3 +1,6 @@
 .env
 
 __debug*
+go/bin
+go/build
+.DS_Store
