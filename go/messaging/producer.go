@@ -21,6 +21,8 @@ func NewKafkaProducer(config *config.ApiConfig) (*KafkaProducer, error) {
 	writer := kafka.NewWriter(kafka.WriterConfig{
 		Brokers:          []string{config.KafkaBroker},
 		CompressionCodec: &compress.SnappyCodec,
+		BatchSize:        10,
+		BatchTimeout:     100 * 1000,
 	})
 
 	kp := &KafkaProducer{
