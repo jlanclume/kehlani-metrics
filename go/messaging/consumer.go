@@ -23,10 +23,10 @@ func (kc *KafkaConsumer) Stop() error {
 // NewKafkaConsumer creates a new Kafka consumer.
 func NewKafkaConsumer(broker string, groupID string, dbAdapter *database.DatabaseAdapter) *KafkaConsumer {
 	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:        []string{broker},
-		Topic:          "metric-event",
-		GroupID:        groupID,
-		CommitInterval: 1,
+		Brokers:     []string{broker},
+		Topic:       "metric-event",
+		GroupID:     groupID + "2",
+		StartOffset: kafka.FirstOffset,
 	})
 
 	return &KafkaConsumer{

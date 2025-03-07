@@ -15,7 +15,13 @@ type DatabaseAdapter struct {
 
 // NewDatabaseAdapter creates a new adapter
 func NewDatabaseAdapter(databaseUrl string) (*DatabaseAdapter, error) {
-	pool, err := pgxpool.New(context.Background(), databaseUrl)
+	config, err := pgxpool.ParseConfig(databaseUrl)
+
+	if err != nil {
+		log.Printf("Failed to parse config: %v", err)
+	}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 
 	if err != nil {
 		log.Printf("Failed to instanciate a database adapter: %v", err)
@@ -41,6 +47,8 @@ func (adapter *DatabaseAdapter) SaveMetricEvent(ctx context.Context, event *prot
 		return err
 	}
 
+	defer conn.Release()
+
 	queries := New(conn)
 	_, err = queries.SaveMetricEvent(ctx, SaveMetricEventParams{
 		EventTimestamp: time.Unix(event.EventTimestamp, 0),
@@ -60,11 +68,12 @@ func (adapter *DatabaseAdapter) SaveMetricEvent(ctx context.Context, event *prot
 // ListAllMetricEventFromDb fetches all metric events, unpaginated
 func (adapter *DatabaseAdapter) ListAllMetricEventFromDb(ctx context.Context) ([]*protobuf.MetricEvent, error) {
 	conn, err := adapter.pool.Acquire(ctx)
-
 	if err != nil {
 		log.Printf("Failed to acquire connection: %v", err)
 		return nil, err
 	}
+
+	defer conn.Release()
 
 	queries := New(conn)
 	events, err := queries.ListAllMetricEvent(ctx)
